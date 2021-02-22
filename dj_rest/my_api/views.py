@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
+from rest_framework_simplejwt.views import token_verify
+
 from .models import Article
 from .serializers import ArticleSerializer
 from rest_framework.decorators import api_view
@@ -10,8 +12,43 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework import generics, mixins, viewsets
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication, BasicAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+
+
+class ArticleGAJwtList(generics.GenericAPIView, mixins.ListModelMixin, mixins.CreateModelMixin):
+    serializer_class = ArticleSerializer
+    queryset = Article.objects.all()
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        jwt_object = JWTAuthentication()
+        # validated_token = jwt_object.get_validated_token(request._request)
+        # user = jwt_object.get_user(validated_token)
+        # print(user)
+
+        # print(request)
+        # print(f'type of request: {type(request)}')
+        header = jwt_object.get_header(request)
+        print(header)
+        raw_token = jwt_object.get_raw_token(header)
+        print(raw_token)
+        validated_token = jwt_object.get_validated_token(raw_token)
+        print(f'validated_token : {validated_token}')
+        print(f'type validated_token : {type(validated_token)}')
+        user_token = jwt_object.get_user(validated_token)
+        print(f'user_token: {user_token}')
+        uid = validated_token['user_id']
+        print(f'id: {uid}')
+        print(f'check exp: {validated_token.check_exp}')
+        print(f'check exp 2: {validated_token["exp"]}')
+
+        return self.list(request)
+
+    def post(self, request):
+        return self.create(request)
 
 
 class ArticleMVSet(viewsets.ModelViewSet):
